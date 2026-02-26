@@ -81,6 +81,8 @@ Add to your MCP settings:
 | `swap_quote` | Best-route swap quotes |
 | `swap_calldata` | Generate unsigned swap transaction data |
 
+> ⚠️ **Swap amounts are human-readable** — pass `"0.1"` for 0.1 USDT, NOT `"100000000000000000"`. Response `toAmount` is also human-readable.
+
 ## Environment Variables
 
 | Variable | Default | Description |

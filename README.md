@@ -105,3 +105,4 @@ Add to your MCP settings:
 ## License
 
 MIT
+# Branch protection test - safe to delete

@@ -153,6 +153,27 @@ def tx_info(chain: str, contract: str) -> dict:
 
 
 @mcp.tool()
+def batch_tx_info(tokens: list[dict]) -> dict:
+    """Batch get transaction statistics for multiple tokens.
+
+    Args:
+        tokens: List of {"chain": "sol", "contract": "..."} objects (max 100).
+    """
+    return _request("/bgw-pro/market/v3/coin/batchGetTxInfo", {"list": tokens})
+
+
+@mcp.tool()
+def historical_coins(create_time: str, limit: int = 10) -> dict:
+    """Get token list by timestamp (paginated). Useful for discovering new tokens.
+
+    Args:
+        create_time: Timestamp string (e.g. "2025-06-17 06:55:28")
+        limit: Number of records to return (default 10)
+    """
+    return _request("/bgw-pro/market/v3/historical-coins", {"createTime": create_time, "limit": limit})
+
+
+@mcp.tool()
 def rankings(name: str = "topGainers") -> dict:
     """Get token rankings.
 
@@ -256,6 +277,19 @@ def swap_calldata(
     if slippage is not None:
         body["slippage"] = slippage
     return _request("/bgw-pro/swapx/pro/swap", body)
+
+
+@mcp.tool()
+def swap_send(chain: str, txs: list[dict]) -> dict:
+    """Broadcast signed transactions via MEV-protected endpoint.
+
+    Final step in swap flow: quote → calldata → sign → send.
+
+    Args:
+        chain: Chain name (e.g. sol, eth, bnb)
+        txs: List of tx objects with id, chain, rawTx, from, nonce, provider(optional)
+    """
+    return _request("/bgw-pro/swapx/pro/send", {"chain": chain, "txs": txs})
 
 
 # ---------------------------------------------------------------------------

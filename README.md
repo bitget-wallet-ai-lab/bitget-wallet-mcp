@@ -79,6 +79,9 @@ Add to your MCP settings:
 | `liquidity` | Liquidity pool information |
 | `security_audit` | Contract security checks |
 | `swap_quote` | Best-route swap quotes |
+| `batch_tx_info` | Batch transaction statistics for multiple tokens |
+| `historical_coins` | Discover new tokens by timestamp |
+| `swap_send` | Broadcast signed transactions (MEV-protected) |
 | `swap_calldata` | Generate unsigned swap transaction data |
 
 ## Environment Variables
@@ -93,8 +96,8 @@ Add to your MCP settings:
 
 ## Related Projects
 
-- [bitget-wallet-skill](https://github.com/bitget-wallet-ai-lab/bitget-wallet-skill) — AI Agent skill for OpenClaw / Manus / Devin / Bolt / Replit ([compatibility guide](https://github.com/bitget-wallet-ai-lab/bitget-wallet-skill/blob/main/COMPATIBILITY.md))
-- [bitget-wallet-cli](https://github.com/bitget-wallet-ai-lab/bitget-wallet-cli) — CLI tool for developers and traders
+- [bitget-wallet-skill](https://github.com/bitget-wallet-ai-lab/bitget-wallet-skill) — OpenClaw AI Agent skill (with [platform compatibility guide](https://github.com/bitget-wallet-ai-lab/bitget-wallet-skill/blob/main/COMPATIBILITY.md))
+- [bitget-wallet-cli](https://github.com/bitget-wallet-ai-lab/bitget-wallet-cli) — CLI tool for terminal users
 
 ## Security
 

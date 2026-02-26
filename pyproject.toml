@@ -1,0 +1,17 @@
+[project]
+name = "bitget-wallet-mcp"
+version = "1.0.0"
+description = "MCP Server for Bitget Wallet ToB API — on-chain data, security audits, and swap quotes"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp[cli]>=1.0.0",
+    "requests>=2.28.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+bitget-wallet-mcp = "server:mcp.run"

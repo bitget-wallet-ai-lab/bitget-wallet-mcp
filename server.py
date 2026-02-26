@@ -222,7 +222,8 @@ def swap_quote(
         from_chain: Source chain identifier
         from_contract: Source token contract (empty string for native token)
         to_contract: Destination token contract
-        amount: Human-readable amount (e.g. "1" = 1 SOL, not lamports)
+        amount: IMPORTANT: Human-readable amount, NOT smallest units.
+               "0.1" = 0.1 USDT, "1" = 1 SOL. Do NOT pass wei/lamports/raw values.
         to_chain: Destination chain (defaults to from_chain for same-chain swaps)
         from_address: Sender wallet address (optional, for more accurate quotes)
     """
@@ -257,7 +258,8 @@ def swap_calldata(
         from_chain: Source chain identifier
         from_contract: Source token contract
         to_contract: Destination token contract
-        amount: Human-readable amount
+        amount: IMPORTANT: Human-readable amount, NOT smallest units.
+               "0.1" = 0.1 USDT, "1" = 1 SOL. Do NOT pass wei/lamports/raw values.
         from_address: Sender wallet address
         to_address: Recipient wallet address
         market: Market/aggregator from quote result

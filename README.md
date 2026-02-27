@@ -103,9 +103,17 @@ Add to your MCP settings:
 
 ## Security
 
-- Swap calldata only generates unsigned transaction data — **actual execution requires wallet signing**
-- Demo API keys are public and read-only safe
-- For production use, set your own credentials via environment variables
+## Security
+
+- Only communicates with `https://bopenapi.bgwapi.io` — no other external endpoints
+- No `eval()` / `exec()` or dynamic code execution
+- No file system access outside the project directory
+- Built-in API keys are public demo credentials (safe to commit)
+- No data collection, telemetry, or analytics
+- No access to sensitive files (SSH keys, credentials, wallet files, etc.)
+- Swap calldata only generates unsigned transaction data — actual execution requires wallet signing
+- Dependencies: `requests`, `mcp` (stdlib: `hmac`, `hashlib`, `json`, `base64`)
+- We recommend auditing the source yourself before installation
 
 ## License
 

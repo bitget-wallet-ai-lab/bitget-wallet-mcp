@@ -74,7 +74,7 @@ def _request(path: str, body: dict | None = None) -> dict[str, Any]:
 CHAINS = {
     "eth": "1", "sol": "100278", "bnb": "56", "base": "8453",
     "arbitrum": "42161", "trx": "6", "ton": "100280",
-    "suinet": "100281", "optimism": "10",
+    "suinet": "100281", "optimism": "10", "matic": "137",
 }
 
 # ---------------------------------------------------------------------------
@@ -83,7 +83,7 @@ CHAINS = {
 mcp = FastMCP(
     "Bitget Wallet",
     instructions="On-chain data queries, token security audits, and swap quotes via Bitget Wallet ToB API. "
-                 "Supports Ethereum, Solana, BNB Chain, Base, Arbitrum, Tron, TON, Sui, Optimism.",
+                 "Supports Ethereum, Solana, BNB Chain, Base, Arbitrum, Tron, TON, Sui, Optimism, Polygon.",
 )
 
 

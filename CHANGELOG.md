@@ -16,10 +16,13 @@ Format: date-based versioning (`YYYY.M.DD-N`), aligned with [bitget-wallet-skill
 - `deadline` parameter to `swap_calldata` tool (transaction expiry in seconds, mitigates sandwich attacks)
 - `from_symbol` and `to_symbol` parameters to `swap_quote` and `swap_calldata` tools
 
+### Fixed
+- Added missing `matic` (Polygon) to supported chains
+
 ### Audit
-- ✅ `server.py`: parameter additions only, no logic changes
+- ✅ `server.py`: parameter additions + chain code fix
 - ✅ No dependency changes
-- ✅ Full parity with skill repo parameters
+- ✅ Full parity with skill repo parameters and chain codes
 
 ---
 

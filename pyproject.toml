@@ -1,6 +1,6 @@
 [project]
 name = "bitget-wallet-mcp"
-version = "1.0.0"
+version = "2026.3.3-1"
 description = "MCP Server for Bitget Wallet ToB API — on-chain data, security audits, and swap quotes"
 readme = "README.md"
 requires-python = ">=3.11"

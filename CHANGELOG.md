@@ -14,11 +14,12 @@ Format: date-based versioning (`YYYY.M.DD-N`), aligned with [bitget-wallet-skill
 
 ### Added
 - `deadline` parameter to `swap_calldata` tool (transaction expiry in seconds, mitigates sandwich attacks)
+- `from_symbol` and `to_symbol` parameters to `swap_quote` and `swap_calldata` tools
 
 ### Audit
-- ✅ `server.py`: +3 lines — deadline parameter passthrough only
+- ✅ `server.py`: parameter additions only, no logic changes
 - ✅ No dependency changes
-- ✅ Aligns with skill repo `2026.3.2-1` security update
+- ✅ Full parity with skill repo parameters
 
 ---
 

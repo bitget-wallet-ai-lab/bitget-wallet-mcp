@@ -215,6 +215,8 @@ def swap_quote(
     amount: str,
     to_chain: str = "",
     from_address: str = "",
+    from_symbol: str = "",
+    to_symbol: str = "",
 ) -> dict:
     """Get a swap quote with best route and estimated output.
 
@@ -226,6 +228,8 @@ def swap_quote(
                "0.1" = 0.1 USDT, "1" = 1 SOL. Do NOT pass wei/lamports/raw values.
         to_chain: Destination chain (defaults to from_chain for same-chain swaps)
         from_address: Sender wallet address (optional, for more accurate quotes)
+        from_symbol: Source token symbol (optional, helps with routing)
+        to_symbol: Destination token symbol (optional, helps with routing)
     """
     body: dict[str, Any] = {
         "fromChain": from_chain,
@@ -237,6 +241,10 @@ def swap_quote(
     }
     if from_address:
         body["fromAddress"] = from_address
+    if from_symbol:
+        body["fromSymbol"] = from_symbol
+    if to_symbol:
+        body["toSymbol"] = to_symbol
     return _request("/bgw-pro/swapx/pro/quote", body)
 
 
@@ -252,6 +260,8 @@ def swap_calldata(
     to_chain: str = "",
     slippage: float | None = None,
     deadline: int | None = None,
+    from_symbol: str = "",
+    to_symbol: str = "",
 ) -> dict:
     """Generate unsigned transaction data for a swap (requires wallet signing to execute).
 
@@ -269,6 +279,8 @@ def swap_calldata(
         deadline: Transaction deadline in seconds (optional, default: API default 600s).
                  Controls how long the transaction remains valid on-chain.
                  Recommended: 300s for safety against sandwich attacks.
+        from_symbol: Source token symbol (optional)
+        to_symbol: Destination token symbol (optional)
     """
     body: dict[str, Any] = {
         "fromChain": from_chain,
@@ -284,6 +296,10 @@ def swap_calldata(
         body["slippage"] = slippage
     if deadline is not None:
         body["deadline"] = deadline
+    if from_symbol:
+        body["fromSymbol"] = from_symbol
+    if to_symbol:
+        body["toSymbol"] = to_symbol
     return _request("/bgw-pro/swapx/pro/swap", body)
 
 

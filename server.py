@@ -251,6 +251,7 @@ def swap_calldata(
     market: str,
     to_chain: str = "",
     slippage: float | None = None,
+    deadline: int | None = None,
 ) -> dict:
     """Generate unsigned transaction data for a swap (requires wallet signing to execute).
 
@@ -265,6 +266,9 @@ def swap_calldata(
         market: Market/aggregator from quote result
         to_chain: Destination chain (defaults to from_chain)
         slippage: Slippage tolerance percentage (optional)
+        deadline: Transaction deadline in seconds (optional, default: API default 600s).
+                 Controls how long the transaction remains valid on-chain.
+                 Recommended: 300s for safety against sandwich attacks.
     """
     body: dict[str, Any] = {
         "fromChain": from_chain,
@@ -278,6 +282,8 @@ def swap_calldata(
     }
     if slippage is not None:
         body["slippage"] = slippage
+    if deadline is not None:
+        body["deadline"] = deadline
     return _request("/bgw-pro/swapx/pro/swap", body)
 
 

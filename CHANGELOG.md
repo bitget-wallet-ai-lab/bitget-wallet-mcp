@@ -12,10 +12,13 @@ Format: date-based versioning (`YYYY.M.DD-N`), aligned with [bitget-wallet-skill
 - Version scheme aligned to date-based format (`YYYY.M.DD-N`), matching the skill repo
 - Added `CHANGELOG.md`
 
+### Added
+- `deadline` parameter to `swap_calldata` tool (transaction expiry in seconds, mitigates sandwich attacks)
+
 ### Audit
-- ✅ No functional changes
+- ✅ `server.py`: +3 lines — deadline parameter passthrough only
 - ✅ No dependency changes
-- ✅ Version metadata only
+- ✅ Aligns with skill repo `2026.3.2-1` security update
 
 ---
 

@@ -6,6 +6,25 @@ Format: date-based versioning (`YYYY.M.DD-N`), aligned with [bitget-wallet-skill
 
 ---
 
+## [2026.3.5-1] - 2026-03-05
+
+### Added
+- **Order Mode API**: 4 new MCP tools for gasless + cross-chain swaps
+  - `order_quote` — get swap price with cross-chain and gasless support
+  - `order_create` — create order, receive unsigned tx/signature data
+  - `order_submit` — submit signed transactions
+  - `order_status` — query order lifecycle status (init → processing → success/failed)
+- New chain: Morph (`morph`)
+- Updated MCP instructions string with Order Mode and Polygon/Morph
+
+### Audit
+- ✅ `server.py`: 4 new tools added, no existing logic changed
+- ✅ All new endpoints use same `bopenapi.bgwapi.io` base URL
+- ✅ Same auth mechanism (HMAC-SHA256 + Partner-Code)
+- ✅ No new dependencies
+
+---
+
 ## [2026.3.3-1] - 2026-03-03
 
 ### Changed

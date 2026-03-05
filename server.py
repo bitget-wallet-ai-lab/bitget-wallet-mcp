@@ -75,6 +75,7 @@ CHAINS = {
     "eth": "1", "sol": "100278", "bnb": "56", "base": "8453",
     "arbitrum": "42161", "trx": "6", "ton": "100280",
     "suinet": "100281", "optimism": "10", "matic": "137",
+    "morph": "morph",
 }
 
 # ---------------------------------------------------------------------------
@@ -82,8 +83,10 @@ CHAINS = {
 # ---------------------------------------------------------------------------
 mcp = FastMCP(
     "Bitget Wallet",
-    instructions="On-chain data queries, token security audits, and swap quotes via Bitget Wallet ToB API. "
-                 "Supports Ethereum, Solana, BNB Chain, Base, Arbitrum, Tron, TON, Sui, Optimism, Polygon.",
+    instructions="On-chain data queries, token security audits, swap quotes, and Order Mode (gasless + cross-chain) "
+                 "swaps via Bitget Wallet ToB API. "
+                 "Supports Ethereum, Solana, BNB Chain, Base, Arbitrum, Tron, TON, Sui, Optimism, Polygon, Morph. "
+                 "Order Mode enables gasless transactions (EIP-7702) and one-step cross-chain swaps.",
 )
 
 
@@ -314,6 +317,136 @@ def swap_send(chain: str, txs: list[dict]) -> dict:
         txs: List of tx objects with id, chain, rawTx, from, nonce, provider(optional)
     """
     return _request("/bgw-pro/swapx/pro/send", {"chain": chain, "txs": txs})
+
+
+# ---------------------------------------------------------------------------
+# Order Mode — Gasless & Cross-Chain Swaps
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def order_quote(
+    from_chain: str,
+    from_contract: str,
+    to_contract: str,
+    amount: str,
+    from_address: str,
+    to_chain: str = "",
+    to_address: str = "",
+    fee_rate: str = "",
+) -> dict:
+    """Get an order-mode swap quote with cross-chain and gasless support.
+
+    Order Mode enables gasless transactions (EIP-7702) and one-step cross-chain swaps.
+    Use this instead of swap_quote when you need gasless or cross-chain capabilities.
+
+    Args:
+        from_chain: Source chain (eth, sol, bnb, base, arbitrum, matic, morph)
+        from_contract: Source token contract address
+        to_contract: Destination token contract address
+        amount: Human-readable amount (e.g. "10" for 10 USDC)
+        from_address: Sender wallet address
+        to_chain: Destination chain (defaults to from_chain for same-chain)
+        to_address: Recipient address (REQUIRED for cross-chain to non-EVM chains like Solana)
+        fee_rate: Optional B2B fee rate for partner commission
+    """
+    body: dict[str, Any] = {
+        "fromChain": from_chain,
+        "fromContract": from_contract,
+        "fromAmount": amount,
+        "toChain": to_chain or from_chain,
+        "toContract": to_contract,
+        "fromAddress": from_address,
+    }
+    if to_address:
+        body["toAddress"] = to_address
+    if fee_rate:
+        body["feeRate"] = fee_rate
+    return _request("/bgw-pro/swapx/order/getSwapPrice", body)
+
+
+@mcp.tool()
+def order_create(
+    from_chain: str,
+    from_contract: str,
+    to_contract: str,
+    amount: str,
+    from_address: str,
+    to_address: str,
+    market: str,
+    to_chain: str = "",
+    slippage: float | None = None,
+    fee_rate: str = "",
+    feature: str = "",
+) -> dict:
+    """Create an order and receive unsigned transaction/signature data.
+
+    Returns either `signatures` (gasless via EIP-7702) or `txs` (normal transactions).
+    - signatures array → gasless mode, sign each hash with wallet key
+    - txs array → normal mode, sign and broadcast each transaction
+
+    Args:
+        from_chain: Source chain
+        from_contract: Source token contract
+        to_contract: Destination token contract
+        amount: Human-readable amount
+        from_address: Sender wallet address
+        to_address: Recipient wallet address (use target chain format for cross-chain)
+        market: Market/aggregator from order_quote result
+        to_chain: Destination chain (defaults to from_chain)
+        slippage: Slippage tolerance percentage
+        fee_rate: Optional B2B fee rate
+        feature: Optional feature flag (e.g. "no_gas" for gasless mode)
+    """
+    body: dict[str, Any] = {
+        "fromChain": from_chain,
+        "fromContract": from_contract,
+        "fromAmount": amount,
+        "toChain": to_chain or from_chain,
+        "toContract": to_contract,
+        "fromAddress": from_address,
+        "toAddress": to_address,
+        "market": market,
+    }
+    if slippage is not None:
+        body["slippage"] = str(slippage)
+    if fee_rate:
+        body["feeRate"] = fee_rate
+    if feature:
+        body["feature"] = feature
+    return _request("/bgw-pro/swapx/order/makeSwapOrder", body)
+
+
+@mcp.tool()
+def order_submit(order_id: str, signed_txs: list[str]) -> dict:
+    """Submit signed transactions for an order.
+
+    After signing the data from order_create, submit the signatures here.
+    For gasless (EIP-7702): submit hex-encoded signatures (0x-prefixed).
+    For normal txs: submit serialized signed transactions.
+
+    Args:
+        order_id: Order ID from order_create
+        signed_txs: List of signed transaction data strings
+    """
+    return _request("/bgw-pro/swapx/order/submitSwapOrder", {
+        "orderId": order_id,
+        "signedTxs": signed_txs,
+    })
+
+
+@mcp.tool()
+def order_status(order_id: str) -> dict:
+    """Query order lifecycle status.
+
+    Status flow: init → processing → success | failed | refunding → refunded
+
+    Returns order details including fromChain, toChain, fromAmount, toAmount,
+    receiveAmount (actual amount received on success), and transaction hashes.
+
+    Args:
+        order_id: Order ID to query
+    """
+    return _request("/bgw-pro/swapx/order/getSwapOrder", {"orderId": order_id})
 
 
 # ---------------------------------------------------------------------------

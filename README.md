@@ -13,10 +13,20 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that e
 - **Security Audit** — honeypot detection, permission checks, blacklist analysis
 - **Swap Quote** — best-route quotes for same-chain and cross-chain swaps
 - **Swap Calldata** — generate unsigned transaction data for wallet signing
+- **Order Quote** — cross-chain + gasless aware price quotes
+- **Order Create** — create orders with unsigned tx/signature data
+- **Order Submit** — submit signed transactions for an order
+- **Order Status** — track order lifecycle (init → processing → success)
+
+### ✨ Order Mode — Gasless & Cross-Chain Swaps
+
+- **Gasless Transactions (EIP-7702)** — swap with zero native token balance; gas is deducted from the input token
+- **One-Step Cross-Chain** — swap tokens across chains in a single order, no manual bridging
+- Supported on all EVM chains: Ethereum, Base, BNB Chain, Arbitrum, Polygon, Morph
 
 ### Supported Chains
 
-Ethereum · Solana · BNB Chain · Base · Arbitrum · Tron · TON · Sui · Optimism
+Ethereum · Solana · BNB Chain · Base · Arbitrum · Tron · TON · Sui · Optimism · Polygon · Morph
 
 ## Quick Start
 

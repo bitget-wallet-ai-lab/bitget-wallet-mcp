@@ -57,6 +57,26 @@ def _request(path: str, body: dict | None = None) -> dict[str, Any]:
     return resp.json()
 
 
+def _request_get(path_with_query: str) -> dict[str, Any]:
+    """GET request with BKHmacAuth signing."""
+    ts = str(int(time.time() * 1000))
+    sign = _make_sign("GET", path_with_query, "", ts)
+    token_val = WALLET_ID if WALLET_ID else "toc_agent"
+    headers = {
+        "channel": "toc_agent",
+        "brand": "toc_agent",
+        "clientversion": "10.0.0",
+        "language": "en",
+        "token": token_val,
+        "X-SIGN": sign,
+        "X-TIMESTAMP": ts,
+    }
+    resp = requests.get(BASE_URL + path_with_query, headers=headers, timeout=30)
+    if resp.status_code != 200:
+        return {"status": -1, "error_code": resp.status_code, "msg": resp.text[:500]}
+    return resp.json()
+
+
 # ---------------------------------------------------------------------------
 # Chain ID mapping
 # ---------------------------------------------------------------------------
@@ -85,6 +105,10 @@ mcp = FastMCP(
         "holders, liquidity, and bonding curve progress. "
         "Smart money tracking: view top profitable addresses, profit/loss analysis per token, and track KOL/smart money "
         "trading activity on K-line charts. "
+        "RWA (Real World Asset) stock trading: discover available stocks (NVDA, TSLA, AAPL, etc.), get stock info, "
+        "market status, K-line charts, order prices, trading config, and portfolio holdings on BNB/ETH chains. "
+        "Smart money discovery: find top KOL and smart money addresses with performance filters (PnL, win rate, "
+        "trade count) across chains. "
         "Balance: batch query token balances and USD values across chains."
     ),
 )
@@ -230,6 +254,20 @@ def search_tokens(keyword: str, chain: str = "", limit: int = 20, order_by: str 
     if order_by:
         body["orderBy"] = order_by
     return _request("/market/v3/coin/search", body)
+
+
+@mcp.tool()
+def search_tokens_v2(keyword: str, chain: str = "") -> dict:
+    """Search tokens by keyword using v2 API (broader results including DEX tokens).
+
+    Args:
+        keyword: Search keyword (token name, symbol, or contract address)
+        chain: Filter by chain (optional)
+    """
+    body: dict[str, Any] = {"keyword": keyword}
+    if chain:
+        body["chain"] = chain
+    return _request("/market/v2/search/tokens", body)
 
 
 @mcp.tool()
@@ -457,6 +495,137 @@ def top_profit(chain: str, contract: str) -> dict:
         contract: Token contract address
     """
     return _request("/market/v2/coin/GetTopProfit", {"chain": chain, "contract": contract})
+
+
+@mcp.tool()
+def smart_money_addresses(
+    group_ids: list[int] | None = None,
+    data_period: str = "7d",
+    sort_field: str = "pnl_usd",
+    sort_order: str = "desc",
+    param_filters: dict | None = None,
+    page: int = 1,
+    limit: int = 30,
+) -> dict:
+    """Find KOL and smart money addresses with performance filters.
+
+    Args:
+        group_ids: Role filter — [0]=all, [1]=smart money, [2]=KOL (default all)
+        data_period: Statistics window — "24h", "7d" (default), "30d"
+        sort_field: Sort by — "pnl_usd" (default), "win_rate", "trade_count", "last_activity_time"
+        sort_order: "desc" (default) or "asc"
+        param_filters: Filter map. Keys: chain (values list), pnl_usd (min/max), win_rate (min/max 0-100), trade_count (min/max).
+                       Example: {"chain": {"values": ["sol"]}, "win_rate": {"min": 70, "max": 100}}
+        page: Page number (default 1)
+        limit: Page size, max 30 (default 30)
+    """
+    body: dict[str, Any] = {
+        "data_period": data_period,
+        "sort_field": sort_field,
+        "sort_order": sort_order,
+        "page": page,
+        "limit": limit,
+    }
+    if group_ids is not None:
+        body["recommend_group_ids"] = group_ids
+    if param_filters is not None:
+        body["param_filters"] = param_filters
+    return _request("/market/v2/monitor/recommend-group/address/list", body)
+
+
+# ---------------------------------------------------------------------------
+# RWA (Real World Asset) Tools
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def rwa_ticker_list(chain: str, user_address: str = "", keyword: str = "") -> dict:
+    """Get available RWA stock tickers. Optionally include user balance.
+
+    Args:
+        chain: Chain — "bnb" or "eth"
+        user_address: User wallet address (optional, to include balance info)
+        keyword: Search keyword for stock name or contract (optional)
+    """
+    body: dict[str, Any] = {"chain": chain}
+    if user_address:
+        body["user_address"] = user_address
+    if keyword:
+        body["key_word"] = keyword
+    return _request("/market/v2/rwa/GetUserTickerSelector", body)
+
+
+@mcp.tool()
+def rwa_config(address_list: list[dict]) -> dict:
+    """Get RWA trading config: supported stablecoins, slippage, amount limits, gas info.
+
+    Args:
+        address_list: List of {"chain": "bnb", "address": "0x..."} objects for each chain
+    """
+    return _request("/swap-go/rwa/getConfig", {"addressList": address_list})
+
+
+@mcp.tool()
+def rwa_stock_info(ticker: str) -> dict:
+    """Get RWA stock info: market status, trading limits, chain assets, description.
+
+    Args:
+        ticker: Stock ticker (e.g. "NVDAon", "TSLAon", "AAPLon")
+    """
+    import urllib.parse
+    path = f"/market/v2/rwa/StockInfo?ticker={urllib.parse.quote(ticker)}"
+    return _request_get(path)
+
+
+@mcp.tool()
+def rwa_order_price(
+    ticker: str,
+    chain: str,
+    side: str,
+    tx_coin_contract: str,
+    user_address: str,
+) -> dict:
+    """Get display buy/sell price for an RWA stock (pre-trade display, not actual quote).
+
+    Args:
+        ticker: Stock ticker (e.g. "NVDAon")
+        chain: Chain — "bnb" or "eth"
+        side: "buy" or "sell"
+        tx_coin_contract: Stablecoin contract from rwa_config (fromTokenList/toTokenList)
+        user_address: User wallet address
+    """
+    return _request("/market/v2/rwa/StockOrderPrice", {
+        "ticker": ticker,
+        "chain": chain,
+        "side": side,
+        "tx_coin_contract": tx_coin_contract,
+        "user_address": user_address,
+    })
+
+
+@mcp.tool()
+def rwa_kline(chain: str, contract: str, period: str = "1d", size: int | None = None) -> dict:
+    """Get K-line data for an RWA stock.
+
+    Args:
+        chain: Use "rwa" for RWA stocks
+        contract: Stock ticker (e.g. "NVDAon")
+        period: Time period (e.g. "1d", "1h")
+        size: Number of candles (optional)
+    """
+    body: dict[str, Any] = {"chain": chain, "contract": contract, "period": period}
+    if size is not None:
+        body["size"] = size
+    return _request("/market/v2/coin/Kline", body)
+
+
+@mcp.tool()
+def rwa_my_holdings(user_address: str) -> dict:
+    """Get user's RWA stock holdings.
+
+    Args:
+        user_address: User wallet address
+    """
+    return _request("/market/v2/rwa/GetMyHoldings", {"user_address": user_address})
 
 
 # ---------------------------------------------------------------------------

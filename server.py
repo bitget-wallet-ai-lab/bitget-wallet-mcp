@@ -465,119 +465,127 @@ def top_profit(chain: str, contract: str) -> dict:
 
 @mcp.tool()
 def swap_quote(
+    from_address: str,
     from_chain: str,
+    from_symbol: str,
     from_contract: str,
+    from_amount: str,
+    to_chain: str,
+    to_symbol: str,
     to_contract: str,
-    amount: str,
-    to_chain: str = "",
-    from_address: str = "",
-    from_symbol: str = "",
-    to_symbol: str = "",
+    to_address: str = "",
+    tab_type: str = "swap",
+    slippage: str = "",
 ) -> dict:
     """Get a swap quote with best route and estimated output.
 
     This is step 1 of the swap flow: quote → confirm → make_order → (sign) → send.
 
     Args:
-        from_chain: Source chain identifier
-        from_contract: Source token contract (empty string for native token)
-        to_contract: Destination token contract
-        amount: Human-readable amount, NOT smallest units.
-               "0.1" = 0.1 USDT, "1" = 1 SOL. Do NOT pass wei/lamports/raw values.
-        to_chain: Destination chain (defaults to from_chain for same-chain swaps)
-        from_address: Sender wallet address (optional, for more accurate quotes)
-        from_symbol: Source token symbol (optional, helps with routing)
-        to_symbol: Destination token symbol (optional, helps with routing)
+        from_address: Sender wallet address
+        from_chain: Source chain identifier (eth, sol, bnb, base, arbitrum, etc.)
+        from_symbol: Source token symbol (e.g. "ETH", "SOL", "USDT")
+        from_contract: Source token contract address (empty string for native tokens)
+        from_amount: Human-readable amount, NOT smallest units.
+                    "0.1" = 0.1 USDT, "1" = 1 SOL. Do NOT pass wei/lamports/raw values.
+        to_chain: Destination chain identifier
+        to_symbol: Destination token symbol
+        to_contract: Destination token contract address
+        to_address: Recipient wallet address (defaults to from_address if empty)
+        tab_type: Swap type — "swap" for same-chain, "bridge" for cross-chain (default "swap")
+        slippage: Slippage tolerance as string, e.g. "0.5" for 0.5% (default "" for auto)
     """
     body: dict[str, Any] = {
+        "fromAddress": from_address,
         "fromChain": from_chain,
+        "fromSymbol": from_symbol,
         "fromContract": from_contract,
-        "toChain": to_chain or from_chain,
+        "fromAmount": from_amount,
+        "toChain": to_chain,
+        "toSymbol": to_symbol,
         "toContract": to_contract,
-        "fromAmount": amount,
-        "estimateGas": True,
+        "tab_type": tab_type,
+        "publicKey": "",
+        "slippage": slippage,
+        "toAddress": to_address or from_address,
     }
-    if from_address:
-        body["fromAddress"] = from_address
-    if from_symbol:
-        body["fromSymbol"] = from_symbol
-    if to_symbol:
-        body["toSymbol"] = to_symbol
     return _request("/swap-go/swapx/quote", body)
 
 
 @mcp.tool()
 def swap_confirm(
-    from_chain: str,
-    from_contract: str,
-    to_contract: str,
-    amount: str,
     from_address: str,
-    to_address: str,
+    from_chain: str,
+    from_symbol: str,
+    from_contract: str,
+    from_amount: str,
+    to_chain: str,
+    to_symbol: str,
+    to_contract: str,
     market: str,
+    to_address: str = "",
+    tab_type: str = "swap",
+    slippage: str = "",
     protocol: str = "",
-    to_chain: str = "",
-    slippage: float | None = None,
     feature: str = "",
-    from_symbol: str = "",
-    to_symbol: str = "",
 ) -> dict:
-    """Confirm a swap quote (2nd quote step). Uses market/protocol/slippage/feature from initial quote result.
+    """Confirm a swap quote (2nd quote step). Uses market/protocol from initial quote result.
 
     This is step 2 of the swap flow: quote → confirm → make_order → (sign) → send.
 
     Args:
-        from_chain: Source chain identifier
-        from_contract: Source token contract (empty string for native token)
-        to_contract: Destination token contract
-        amount: Human-readable amount, NOT smallest units.
         from_address: Sender wallet address
-        to_address: Recipient wallet address
+        from_chain: Source chain identifier
+        from_symbol: Source token symbol
+        from_contract: Source token contract (empty string for native token)
+        from_amount: Human-readable amount, NOT smallest units.
+        to_chain: Destination chain identifier
+        to_symbol: Destination token symbol
+        to_contract: Destination token contract
         market: Market/aggregator from quote result
+        to_address: Recipient wallet address (defaults to from_address)
+        tab_type: Swap type — "swap" or "bridge" (default "swap")
+        slippage: Slippage tolerance as string (default "" for auto)
         protocol: Protocol from quote result (optional)
-        to_chain: Destination chain (defaults to from_chain)
-        slippage: Slippage tolerance percentage (optional)
         feature: Feature flag — "user_gas" or "no_gas" (optional)
-        from_symbol: Source token symbol (optional)
-        to_symbol: Destination token symbol (optional)
     """
     body: dict[str, Any] = {
-        "fromChain": from_chain,
-        "fromContract": from_contract,
-        "toChain": to_chain or from_chain,
-        "toContract": to_contract,
-        "fromAmount": amount,
         "fromAddress": from_address,
-        "toAddress": to_address,
+        "fromChain": from_chain,
+        "fromSymbol": from_symbol,
+        "fromContract": from_contract,
+        "fromAmount": from_amount,
+        "toChain": to_chain,
+        "toSymbol": to_symbol,
+        "toContract": to_contract,
+        "toAddress": to_address or from_address,
         "market": market,
+        "tab_type": tab_type,
+        "publicKey": "",
+        "slippage": slippage,
     }
     if protocol:
         body["protocol"] = protocol
-    if slippage is not None:
-        body["slippage"] = slippage
     if feature:
         body["feature"] = feature
-    if from_symbol:
-        body["fromSymbol"] = from_symbol
-    if to_symbol:
-        body["toSymbol"] = to_symbol
     return _request("/swap-go/swapx/confirm", body)
 
 
 @mcp.tool()
 def swap_make_order(
-    from_chain: str,
-    from_contract: str,
-    to_contract: str,
-    amount: str,
     from_address: str,
-    to_address: str,
+    from_chain: str,
+    from_symbol: str,
+    from_contract: str,
+    from_amount: str,
+    to_chain: str,
+    to_symbol: str,
+    to_contract: str,
     market: str,
-    to_chain: str = "",
-    slippage: float | None = None,
+    to_address: str = "",
+    tab_type: str = "swap",
+    slippage: str = "",
     feature: str = "",
-    from_symbol: str = "",
-    to_symbol: str = "",
 ) -> dict:
     """Create a swap order and receive unsigned transactions to sign.
 
@@ -585,37 +593,37 @@ def swap_make_order(
     Returns unsigned transaction data that must be signed by the wallet.
 
     Args:
-        from_chain: Source chain identifier
-        from_contract: Source token contract
-        to_contract: Destination token contract
-        amount: Human-readable amount
         from_address: Sender wallet address
-        to_address: Recipient wallet address
+        from_chain: Source chain identifier
+        from_symbol: Source token symbol
+        from_contract: Source token contract (empty string for native token)
+        from_amount: Human-readable amount
+        to_chain: Destination chain identifier
+        to_symbol: Destination token symbol
+        to_contract: Destination token contract
         market: Market/aggregator from quote/confirm result
-        to_chain: Destination chain (defaults to from_chain)
-        slippage: Slippage tolerance percentage (optional)
+        to_address: Recipient wallet address (defaults to from_address)
+        tab_type: Swap type — "swap" or "bridge" (default "swap")
+        slippage: Slippage tolerance as string (default "" for auto)
         feature: Feature flag — "user_gas" or "no_gas" (optional)
-        from_symbol: Source token symbol (optional)
-        to_symbol: Destination token symbol (optional)
     """
     body: dict[str, Any] = {
-        "fromChain": from_chain,
-        "fromContract": from_contract,
-        "toChain": to_chain or from_chain,
-        "toContract": to_contract,
-        "fromAmount": amount,
         "fromAddress": from_address,
-        "toAddress": to_address,
+        "fromChain": from_chain,
+        "fromSymbol": from_symbol,
+        "fromContract": from_contract,
+        "fromAmount": from_amount,
+        "toChain": to_chain,
+        "toSymbol": to_symbol,
+        "toContract": to_contract,
+        "toAddress": to_address or from_address,
         "market": market,
+        "tab_type": tab_type,
+        "publicKey": "",
+        "slippage": slippage,
     }
-    if slippage is not None:
-        body["slippage"] = str(slippage)
     if feature:
         body["feature"] = feature
-    if from_symbol:
-        body["fromSymbol"] = from_symbol
-    if to_symbol:
-        body["toSymbol"] = to_symbol
     return _request("/swap-go/swapx/makeOrder", body)
 
 
@@ -654,7 +662,7 @@ def check_swap_token(tokens: list[dict]) -> dict:
     Args:
         tokens: List of token objects, each with {"chain": "...", "contract": "...", "symbol": "..."}
     """
-    return _request("/swap-go/swapx/checkSwapToken", {"tokens": tokens})
+    return _request("/swap-go/swapx/checkSwapToken", {"list": tokens})
 
 
 @mcp.tool()
@@ -674,16 +682,23 @@ def get_token_list(chain: str) -> dict:
 # ---------------------------------------------------------------------------
 
 @mcp.tool()
-def balance(tokens: list[dict]) -> dict:
+def balance(wallets: list[dict], currency: str = "usd") -> dict:
     """Batch query token balances and USD values across chains.
 
     Args:
-        tokens: List of token objects, each with {"chain": "...", "address": "...", "contract": "..."}
-               - chain: Chain identifier
-               - address: Wallet address to query
-               - contract: Token contract address (empty string for native token)
+        wallets: List of wallet objects, each with:
+                 - chain: Chain identifier (eth, sol, bnb, etc.)
+                 - address: Wallet address to query
+                 - contract: List of contract address strings. Use [""] for native token only,
+                            or ["", "0xcontract..."] for native + specific tokens.
+        currency: Currency for USD conversion (default "usd")
     """
-    return _request("/user/wallet/batchV2", {"tokens": tokens})
+    return _request("/user/wallet/batchV2", {
+        "list": wallets,
+        "nocache": True,
+        "appointCurrency": currency,
+        "noreport": True,
+    })
 
 
 # ---------------------------------------------------------------------------

@@ -501,7 +501,7 @@ def swap_quote(
         "fromSymbol": from_symbol,
         "fromContract": from_contract,
         "fromAmount": from_amount,
-        "toChain": to_chain,
+        "toChain": to_chain or from_chain,
         "toSymbol": to_symbol,
         "toContract": to_contract,
         "tab_type": tab_type,
@@ -555,7 +555,7 @@ def swap_confirm(
         "fromSymbol": from_symbol,
         "fromContract": from_contract,
         "fromAmount": from_amount,
-        "toChain": to_chain,
+        "toChain": to_chain or from_chain,
         "toSymbol": to_symbol,
         "toContract": to_contract,
         "toAddress": to_address or from_address,
@@ -613,7 +613,7 @@ def swap_make_order(
         "fromSymbol": from_symbol,
         "fromContract": from_contract,
         "fromAmount": from_amount,
-        "toChain": to_chain,
+        "toChain": to_chain or from_chain,
         "toSymbol": to_symbol,
         "toContract": to_contract,
         "toAddress": to_address or from_address,
@@ -653,16 +653,17 @@ def swap_get_order_details(order_id: str) -> dict:
 
 
 @mcp.tool()
-def check_swap_token(tokens: list[dict]) -> dict:
+def check_swap_token(token_list: list[dict]) -> dict:
     """Pre-trade risk check for tokens before swapping.
 
     Use this to check if a token is safe to trade (honeypot, tax, blacklist, etc.)
     before initiating a swap.
 
     Args:
-        tokens: List of token objects, each with {"chain": "...", "contract": "...", "symbol": "..."}
+        token_list: List of token objects, each with {"chain": "...", "contract": "...", "symbol": "..."}.
+                    The body key sent to the API is "list", not "tokens".
     """
-    return _request("/swap-go/swapx/checkSwapToken", {"list": tokens})
+    return _request("/swap-go/swapx/checkSwapToken", {"list": token_list})
 
 
 @mcp.tool()

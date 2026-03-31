@@ -503,127 +503,140 @@ def swap_quote(
         "fromAmount": from_amount,
         "toChain": to_chain or from_chain,
         "toSymbol": to_symbol,
-        "toContract": to_contract,
+        "toContract": to_contract or "",
         "tab_type": tab_type,
         "publicKey": "",
         "slippage": slippage,
         "toAddress": to_address or from_address,
+        "requestId": str(int(time.time() * 1000)),
     }
     return _request("/swap-go/swapx/quote", body)
 
 
 @mcp.tool()
 def swap_confirm(
-    from_address: str,
     from_chain: str,
     from_symbol: str,
     from_contract: str,
     from_amount: str,
+    from_address: str,
     to_chain: str,
     to_symbol: str,
     to_contract: str,
+    to_address: str,
     market: str,
-    to_address: str = "",
-    tab_type: str = "swap",
-    slippage: str = "",
-    protocol: str = "",
-    feature: str = "",
+    protocol: str,
+    slippage: str,
+    gas_level: str = "average",
+    features: list[str] | None = None,
+    last_out_amount: str = "",
+    recommend_slippage: str = "",
 ) -> dict:
     """Confirm a swap quote (2nd quote step). Uses market/protocol from initial quote result.
 
     This is step 2 of the swap flow: quote → confirm → make_order → (sign) → send.
 
     Args:
-        from_address: Sender wallet address
         from_chain: Source chain identifier
         from_symbol: Source token symbol
         from_contract: Source token contract (empty string for native token)
         from_amount: Human-readable amount, NOT smallest units.
+        from_address: Sender wallet address
         to_chain: Destination chain identifier
         to_symbol: Destination token symbol
         to_contract: Destination token contract
-        market: Market/aggregator from quote result
-        to_address: Recipient wallet address (defaults to from_address)
-        tab_type: Swap type — "swap" or "bridge" (default "swap")
-        slippage: Slippage tolerance as string (default "" for auto)
-        protocol: Protocol from quote result (optional)
-        feature: Feature flag — "user_gas" or "no_gas" (optional)
+        to_address: Recipient wallet address
+        market: Market ID from quote result (quoteResults[].market.id)
+        protocol: Protocol from quote result (quoteResults[].market.protocol)
+        slippage: Slippage tolerance as string, e.g. "0.5" for 0.5%
+        gas_level: Gas level — "average" or "fast" (default "average")
+        features: Gas payment mode — ["user_gas"] (user pays gas) or ["no_gas"] (gasless).
+                  Default ["user_gas"]. Use ["no_gas"] only when native balance is insufficient.
+        last_out_amount: Last quoted output amount (optional, for refresh)
+        recommend_slippage: Recommended slippage from quote (optional, defaults to slippage)
     """
     body: dict[str, Any] = {
-        "fromAddress": from_address,
         "fromChain": from_chain,
         "fromSymbol": from_symbol,
         "fromContract": from_contract,
         "fromAmount": from_amount,
-        "toChain": to_chain or from_chain,
+        "fromAddress": from_address,
+        "toChain": to_chain,
         "toSymbol": to_symbol,
-        "toContract": to_contract,
-        "toAddress": to_address or from_address,
+        "toContract": to_contract or "",
+        "toAddress": to_address,
         "market": market,
-        "tab_type": tab_type,
-        "publicKey": "",
         "slippage": slippage,
+        "gasLevel": gas_level,
+        "features": features or ["user_gas"],
+        "protocol": protocol,
+        "recommendSlippage": recommend_slippage or slippage,
+        "lastOutAmount": last_out_amount,
+        "mevProtection": {
+            "chain": from_chain,
+            "mevFee": "0",
+            "amountMin": from_amount,
+            "mevTarget": True,
+            "mode": "smart",
+        },
     }
-    if protocol:
-        body["protocol"] = protocol
-    if feature:
-        body["feature"] = feature
     return _request("/swap-go/swapx/confirm", body)
 
 
 @mcp.tool()
 def swap_make_order(
-    from_address: str,
+    order_id: str,
     from_chain: str,
-    from_symbol: str,
     from_contract: str,
-    from_amount: str,
+    from_symbol: str,
+    from_address: str,
     to_chain: str,
-    to_symbol: str,
     to_contract: str,
+    to_symbol: str,
+    to_address: str,
+    from_amount: str,
+    slippage: str,
     market: str,
-    to_address: str = "",
-    tab_type: str = "swap",
-    slippage: str = "",
-    feature: str = "",
+    protocol: str,
+    source: str = "agent",
 ) -> dict:
     """Create a swap order and receive unsigned transactions to sign.
 
     This is step 3 of the swap flow: quote → confirm → make_order → (sign) → send.
-    Returns unsigned transaction data that must be signed by the wallet.
+    Returns unsigned transaction data (data.txs) that must be signed by the wallet.
 
     Args:
-        from_address: Sender wallet address
+        order_id: Order ID from confirm result (data.orderId)
         from_chain: Source chain identifier
-        from_symbol: Source token symbol
         from_contract: Source token contract (empty string for native token)
-        from_amount: Human-readable amount
+        from_symbol: Source token symbol
+        from_address: Sender wallet address
         to_chain: Destination chain identifier
-        to_symbol: Destination token symbol
         to_contract: Destination token contract
-        market: Market/aggregator from quote/confirm result
-        to_address: Recipient wallet address (defaults to from_address)
-        tab_type: Swap type — "swap" or "bridge" (default "swap")
-        slippage: Slippage tolerance as string (default "" for auto)
-        feature: Feature flag — "user_gas" or "no_gas" (optional)
+        to_symbol: Destination token symbol
+        to_address: Recipient wallet address
+        from_amount: Human-readable amount
+        slippage: Slippage tolerance as string
+        market: Market ID from confirm result
+        protocol: Protocol from confirm result
+        source: Source identifier (default "agent")
     """
     body: dict[str, Any] = {
-        "fromAddress": from_address,
+        "orderId": order_id,
         "fromChain": from_chain,
-        "fromSymbol": from_symbol,
         "fromContract": from_contract,
-        "fromAmount": from_amount,
-        "toChain": to_chain or from_chain,
+        "fromSymbol": from_symbol,
+        "fromAddress": from_address,
+        "toChain": to_chain,
+        "toContract": to_contract or "",
         "toSymbol": to_symbol,
-        "toContract": to_contract,
-        "toAddress": to_address or from_address,
-        "market": market,
-        "tab_type": tab_type,
-        "publicKey": "",
+        "toAddress": to_address,
+        "fromAmount": from_amount,
         "slippage": slippage,
+        "market": market,
+        "protocol": protocol,
+        "source": source,
     }
-    if feature:
-        body["feature"] = feature
     return _request("/swap-go/swapx/makeOrder", body)
 
 
@@ -675,7 +688,7 @@ def get_token_list(chain: str) -> dict:
     Args:
         chain: Chain identifier (eth, sol, bnb, base, arbitrum, trx, ton, suinet, optimism)
     """
-    return _request("/swap-go/swapx/getTokenList", {"chain": chain})
+    return _request("/swap-go/swapx/getTokenList", {"chain": chain, "isAllNetWork": 1})
 
 
 # ---------------------------------------------------------------------------

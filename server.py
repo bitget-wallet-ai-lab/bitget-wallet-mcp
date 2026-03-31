@@ -86,7 +86,14 @@ mcp = FastMCP(
     instructions="On-chain data queries, token security audits, swap quotes, and Order Mode (gasless + cross-chain) "
                  "swaps via Bitget Wallet ToB API. "
                  "Supports Ethereum, Solana, BNB Chain, Base, Arbitrum, Tron, TON, Sui, Optimism, Polygon, Morph. "
-                 "Order Mode enables gasless transactions (EIP-7702) and one-step cross-chain swaps.",
+                 "Order Mode enables gasless transactions (EIP-7702) and one-step cross-chain swaps. "
+                 "Token analysis tools: search tokens by keyword, get detailed market info (price, mcap, FDV, liquidity, holders, "
+                 "narratives), check developer history and rug status, view K-line charts with smart money/KOL/developer overlays, "
+                 "analyze trading dynamics, transaction lists, holder distribution, and profit analysis. "
+                 "Launchpad scanning: discover new tokens on launchpad platforms (pump.fun, etc.) with filters for market cap, "
+                 "holders, liquidity, and bonding curve progress. "
+                 "Smart money tracking: view top profitable addresses, profit/loss analysis per token, and track KOL/smart money "
+                 "trading activity on K-line charts.",
 )
 
 
@@ -317,6 +324,251 @@ def swap_send(chain: str, txs: list[dict]) -> dict:
         txs: List of tx objects with id, chain, rawTx, from, nonce, provider(optional)
     """
     return _request("/bgw-pro/swapx/pro/send", {"chain": chain, "txs": txs})
+
+
+# ---------------------------------------------------------------------------
+# Token Analysis, Launchpad & Smart Money Tools
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def search_tokens(keyword: str, chain: str = "", limit: int = 20, order_by: str = "") -> dict:
+    """Search for tokens by keyword (name, symbol, or contract address).
+
+    Args:
+        keyword: Search keyword (token name, symbol, or contract address)
+        chain: Filter by chain identifier (optional)
+        limit: Maximum number of results (default 20)
+        order_by: Sort order (e.g. "market_cap") (optional)
+    """
+    body: dict[str, Any] = {"keyword": keyword, "limit": limit}
+    if chain:
+        body["chain"] = chain
+    if order_by:
+        body["orderBy"] = order_by
+    return _request("/bgw-pro/market/v3/coin/search", body)
+
+
+@mcp.tool()
+def coin_market_info(chain: str, contract: str) -> dict:
+    """Get detailed market information for a token including price, market cap, FDV, liquidity, holders, price changes, pool list, and narratives.
+
+    Args:
+        chain: Chain identifier (eth, sol, bnb, base, arbitrum, trx, ton, suinet, optimism)
+        contract: Token contract address
+    """
+    return _request("/bgw-pro/market/v3/coin/getMarketInfo", {"chain": chain, "contract": contract})
+
+
+@mcp.tool()
+def coin_dev(chain: str, contract: str, limit: int = 30, is_migrated: bool | None = None) -> dict:
+    """Get the developer's historical projects with rug status. Useful for checking if a token's dev has a history of rugging.
+
+    Args:
+        chain: Chain identifier
+        contract: Token contract address
+        limit: Number of records to return (default 30)
+        is_migrated: Filter by migration status (optional)
+    """
+    body: dict[str, Any] = {"chain": chain, "contract": contract, "limit": limit}
+    if is_migrated is not None:
+        body["isMigrated"] = is_migrated
+    return _request("/bgw-pro/market/v3/coin/dev", body)
+
+
+@mcp.tool()
+def launchpad_tokens(
+    chain: str = "sol",
+    platforms: list[str] | None = None,
+    stage: int | None = None,
+    mc_min: int | None = None,
+    mc_max: int | None = None,
+    holder_min: int | None = None,
+    holder_max: int | None = None,
+    lp_min: int | None = None,
+    lp_max: int | None = None,
+    progress_min: float | None = None,
+    progress_max: float | None = None,
+    keywords: str = "",
+    limit: int = 100,
+) -> dict:
+    """Get launchpad tokens (e.g. pump.fun) with various filters.
+
+    Stage values: 0=new, 1=launching, 2=launched.
+
+    Args:
+        chain: Chain identifier (default "sol")
+        platforms: Filter by launchpad platforms (optional)
+        stage: Token stage — 0=new, 1=launching, 2=launched (optional)
+        mc_min: Minimum market cap filter (optional)
+        mc_max: Maximum market cap filter (optional)
+        holder_min: Minimum holder count filter (optional)
+        holder_max: Maximum holder count filter (optional)
+        lp_min: Minimum liquidity filter (optional)
+        lp_max: Maximum liquidity filter (optional)
+        progress_min: Minimum bonding curve progress 0.0-1.0 (optional)
+        progress_max: Maximum bonding curve progress 0.0-1.0 (optional)
+        keywords: Search keywords (optional)
+        limit: Maximum number of results (default 100)
+    """
+    body: dict[str, Any] = {"chain": chain, "limit": limit}
+    if platforms is not None:
+        body["platforms"] = platforms
+    if stage is not None:
+        body["stage"] = stage
+    if mc_min is not None:
+        body["mcMin"] = mc_min
+    if mc_max is not None:
+        body["mcMax"] = mc_max
+    if holder_min is not None:
+        body["holderMin"] = holder_min
+    if holder_max is not None:
+        body["holderMax"] = holder_max
+    if lp_min is not None:
+        body["lpMin"] = lp_min
+    if lp_max is not None:
+        body["lpMax"] = lp_max
+    if progress_min is not None:
+        body["progressMin"] = progress_min
+    if progress_max is not None:
+        body["progressMax"] = progress_max
+    if keywords:
+        body["keywords"] = keywords
+    return _request("/bgw-pro/market/v3/launchpad/tokens", body)
+
+
+@mcp.tool()
+def simple_kline(
+    chain: str,
+    contract: str,
+    period: str = "5m",
+    size: int | None = None,
+    user_address: str = "",
+    is_show_kol: bool = True,
+    is_show_smart_money: bool = True,
+    is_show_developer: bool = True,
+) -> dict:
+    """Get simplified K-line data with smart money, KOL, and developer trading overlays.
+
+    Args:
+        chain: Chain identifier
+        contract: Token contract address
+        period: Time period (1s, 1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w)
+        size: Number of candles to return (optional)
+        user_address: User address to highlight on chart (optional)
+        is_show_kol: Show KOL trading activity overlay (default True)
+        is_show_smart_money: Show smart money trading activity overlay (default True)
+        is_show_developer: Show developer trading activity overlay (default True)
+    """
+    body: dict[str, Any] = {
+        "chain": chain,
+        "contract": contract,
+        "period": period,
+        "isShowKol": is_show_kol,
+        "isShowSmartMoney": is_show_smart_money,
+        "isShowDeveloper": is_show_developer,
+    }
+    if size is not None:
+        body["size"] = size
+    if user_address:
+        body["userAddress"] = user_address
+    return _request("/bgw-pro/market/v2/coin/SimpleKline", body)
+
+
+@mcp.tool()
+def trading_dynamics(chain: str, contract: str) -> dict:
+    """Get trading dynamics for a token (buy/sell pressure, whale activity, etc.).
+
+    Args:
+        chain: Chain identifier
+        contract: Token contract address
+    """
+    return _request("/bgw-pro/market/v2/coin/GetTradingDynamics", {"chain": chain, "contract": contract})
+
+
+@mcp.tool()
+def transaction_list(
+    chain: str,
+    contract: str,
+    page: int = 1,
+    size: int = 20,
+    side: str = "",
+    only_barrage: bool = False,
+    period: str = "",
+    txnfrom_tags: list[str] | None = None,
+) -> dict:
+    """Get recent transactions for a token with filtering options.
+
+    Args:
+        chain: Chain identifier
+        contract: Token contract address
+        page: Page number (default 1)
+        size: Page size (default 20)
+        side: Filter by side — "buy" or "sell" (optional)
+        only_barrage: Show only large/notable transactions (default False)
+        period: Time period filter (optional)
+        txnfrom_tags: Filter by sender tags, e.g. ["smart_money", "kol"] (optional)
+    """
+    body: dict[str, Any] = {
+        "chain": chain,
+        "contract": contract,
+        "page": page,
+        "size": size,
+        "onlyBarrage": only_barrage,
+    }
+    if side:
+        body["side"] = side
+    if period:
+        body["period"] = period
+    if txnfrom_tags is not None:
+        body["txnfromTags"] = txnfrom_tags
+    return _request("/bgw-pro/market/v2/coin/TransactionList", body)
+
+
+@mcp.tool()
+def holders_info(
+    chain: str,
+    contract: str,
+    sort: str = "holding_desc",
+    special_holder_key: str = "",
+    address_tags: list[str] | None = None,
+) -> dict:
+    """Get holder distribution and top holders for a token.
+
+    Args:
+        chain: Chain identifier
+        contract: Token contract address
+        sort: Sort order (default "holding_desc")
+        special_holder_key: Filter by special holder type (optional)
+        address_tags: Filter by address tags (optional)
+    """
+    body: dict[str, Any] = {"chain": chain, "contract": contract, "sort": sort}
+    if special_holder_key:
+        body["specialHolderKey"] = special_holder_key
+    if address_tags is not None:
+        body["addressTags"] = address_tags
+    return _request("/bgw-pro/market/v2/GetHoldersInfo", body)
+
+
+@mcp.tool()
+def profit_address_analysis(chain: str, contract: str) -> dict:
+    """Get profit/loss analysis of addresses holding a token (distribution of profitable vs losing addresses).
+
+    Args:
+        chain: Chain identifier
+        contract: Token contract address
+    """
+    return _request("/bgw-pro/market/v2/coin/GetProfitAddressAnalysis", {"chain": chain, "contract": contract})
+
+
+@mcp.tool()
+def top_profit(chain: str, contract: str) -> dict:
+    """Get top profitable addresses for a token (who made the most money trading this token).
+
+    Args:
+        chain: Chain identifier
+        contract: Token contract address
+    """
+    return _request("/bgw-pro/market/v2/coin/GetTopProfit", {"chain": chain, "contract": contract})
 
 
 # ---------------------------------------------------------------------------

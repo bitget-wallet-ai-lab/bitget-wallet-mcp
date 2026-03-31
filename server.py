@@ -18,10 +18,10 @@ from mcp.server.fastmcp import FastMCP
 # ---------------------------------------------------------------------------
 # Config — override via env vars
 # ---------------------------------------------------------------------------
-# Public demo credentials for testing. These may change over time —
-# if they stop working, please update to get the latest keys.
-API_KEY = os.environ.get("BGW_API_KEY", "4843D8C3F1E20772C0E634EDACC5C5F9A0E2DC92")
-API_SECRET = os.environ.get("BGW_API_SECRET", "F2ABFDC684BDC6775FD6286B8D06A3AAD30FD587")
+# Public demo credentials for testing. Override via env vars for production.
+# Test credentials have 2 QPS limit — do not use in production.
+API_KEY = os.environ.get("BGW_API_KEY", "6AE25C9BFEEC4D815097ECD54DDE36B9A1F2B069")
+API_SECRET = os.environ.get("BGW_API_SECRET", "C2638D162310C10D5DAFC8013871F2868E065040")
 PARTNER_CODE = os.environ.get("BGW_PARTNER_CODE", "bgw_swap_public")
 BASE_URL = "https://bopenapi.bgwapi.io"
 
@@ -43,19 +43,26 @@ def _sign(api_path: str, body_str: str, timestamp: str) -> str:
 
 
 def _request(path: str, body: dict | None = None) -> dict[str, Any]:
-    """Authenticated POST to Bitget Wallet ToB API."""
+    """Authenticated POST to Bitget Wallet ToB API.
+
+    Authentication differs by endpoint type:
+    - Market Data / Token endpoints: HMAC signature (x-api-key + x-api-signature)
+    - Swap endpoints (/swapx/): Partner-Code header only (no HMAC needed)
+    """
     timestamp = str(int(time.time() * 1000))
     body_str = json.dumps(body, separators=(",", ":"), sort_keys=True) if body else ""
-    signature = _sign(path, body_str, timestamp)
 
-    headers = {
-        "Content-Type": "application/json",
-        "x-api-key": API_KEY,
-        "x-api-timestamp": timestamp,
-        "x-api-signature": signature,
-    }
+    headers = {"Content-Type": "application/json"}
+
     if "/swapx/" in path:
+        # Swap endpoints use Partner-Code only
         headers["Partner-Code"] = PARTNER_CODE
+    else:
+        # Market/Token endpoints use HMAC signature
+        signature = _sign(path, body_str, timestamp)
+        headers["x-api-key"] = API_KEY
+        headers["x-api-timestamp"] = timestamp
+        headers["x-api-signature"] = signature
 
     resp = requests.post(
         BASE_URL + path,

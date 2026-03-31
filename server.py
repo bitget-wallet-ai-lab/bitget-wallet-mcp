@@ -83,10 +83,12 @@ CHAINS = {
 # ---------------------------------------------------------------------------
 mcp = FastMCP(
     "Bitget Wallet",
-    instructions="On-chain data queries, token security audits, swap quotes, and Order Mode (gasless + cross-chain) "
+    instructions="On-chain data queries, token security audits, swap quotes, reverse quotes, and Order Mode (gasless + cross-chain) "
                  "swaps via Bitget Wallet ToB API. "
                  "Supports Ethereum, Solana, BNB Chain, Base, Arbitrum, Tron, TON, Sui, Optimism, Polygon, Morph. "
-                 "Order Mode enables gasless transactions (EIP-7702) and one-step cross-chain swaps.",
+                 "Order Mode enables gasless transactions (EIP-7702) and one-step cross-chain swaps. "
+                 "Reverse quote (swapr) supports exactIn and minAmountOut modes — use minAmountOut when the user "
+                 "specifies desired output amount instead of input amount.",
 )
 
 
@@ -181,7 +183,7 @@ def rankings(name: str = "topGainers") -> dict:
     """Get token rankings.
 
     Args:
-        name: Ranking type — "topGainers" or "topLosers"
+        name: Ranking type — "topGainers", "topLosers", or "hotpicks"
     """
     return _request("/bgw-pro/market/v3/topRank/detail", {"name": name})
 
@@ -304,6 +306,62 @@ def swap_calldata(
     if to_symbol:
         body["toSymbol"] = to_symbol
     return _request("/bgw-pro/swapx/pro/swap", body)
+
+
+@mcp.tool()
+def swap_reverse_quote(
+    from_chain: str,
+    from_contract: str,
+    to_contract: str,
+    amount: str,
+    request_mode: str,
+    from_address: str,
+    to_address: str,
+    fee_rate: float,
+    slippage: str | None = None,
+    deadline: int | None = None,
+    executor_address: str = "",
+) -> dict:
+    """Get a reverse quote that combines quote + tx building in one call.
+
+    Supports two modes:
+    - exactIn: User specifies input amount → system calculates output
+    - minAmountOut: User specifies desired minimum output → system calculates required input
+
+    Use minAmountOut when the user says something like "I want at least 10 USDC".
+
+    Args:
+        from_chain: Chain identifier (eth, sol, bnb, base, arbitrum, matic, morph)
+        from_contract: Source token contract (empty string for native token)
+        to_contract: Destination token contract
+        amount: IMPORTANT: Human-readable amount, NOT smallest units.
+               In exactIn mode this is the input amount.
+               In minAmountOut mode this is the desired minimum output.
+        request_mode: "exactIn" or "minAmountOut"
+        from_address: Sender wallet address
+        to_address: Recipient wallet address
+        fee_rate: Fee rate as decimal ratio (0.05 = 5%). Must be >= 0. Pass 0 for no fee.
+        slippage: Slippage percentage as string (optional, default "0.5")
+        deadline: Transaction deadline in seconds (optional, default 600)
+        executor_address: If tx sender differs from from_address (optional)
+    """
+    body: dict[str, Any] = {
+        "fromChain": from_chain,
+        "fromContract": from_contract,
+        "toContract": to_contract,
+        "amount": amount,
+        "requestMode": request_mode,
+        "fromAddress": from_address,
+        "toAddress": to_address,
+        "feeRate": fee_rate,
+    }
+    if slippage is not None:
+        body["slippage"] = slippage
+    if deadline is not None:
+        body["deadline"] = deadline
+    if executor_address:
+        body["executorAddress"] = executor_address
+    return _request("/bgw-pro/swapx/pro/swapr", body)
 
 
 @mcp.tool()

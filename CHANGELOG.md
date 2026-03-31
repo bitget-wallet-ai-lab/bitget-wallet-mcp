@@ -6,6 +6,67 @@ Format: date-based versioning (`YYYY.M.DD-N`), aligned with [bitget-wallet-skill
 
 ---
 
+## [2026.3.31-1] - 2026-03-31
+
+### Breaking Changes
+- **API migration**: `bopenapi.bgwapi.io` (ToB API) → `copenapi.bgwapi.io` (Skill internal API)
+- **Auth rewrite**: HMAC-SHA256 + API Key → SHA256 hash signing (BKHmacAuth), zero secrets
+- **Removed**: `API_KEY`, `API_SECRET`, `PARTNER_CODE` env vars and all HMAC/base64 signing
+- **Removed tools**: `order_quote`, `order_create`, `order_submit`, `order_status`, `swap_calldata`
+- **Endpoint migration**: `/bgw-pro/market/` → `/market/`, `/bgw-pro/swapx/` → `/swap-go/swapx/`
+
+### Added — Swap Flow (aligned with Skill)
+- `swap_quote` — first quote with multi-market results, includes `requestId`
+- `swap_confirm` — second quote with `mevProtection`, `features`, `gasLevel`, `recommendSlippage`
+- `swap_make_order` — create order with `orderId` (from confirm), returns unsigned txs
+- `swap_send` — submit signed txs (`orderId` + `txs` array)
+- `swap_get_order_details` — query order status
+- `check_swap_token` — pre-trade risk check (body key `list`)
+- `get_token_list` — popular tokens per chain (with `isAllNetWork: 1`)
+
+### Added — Token Analysis (10 tools)
+- `search_tokens` — v3 token search with ordering
+- `search_tokens_v2` — v2 broader search (DEX tokens)
+- `coin_market_info` — price, MC, FDV, liquidity, holders, narratives
+- `coin_dev` — developer history and rug rate analysis
+- `launchpad_tokens` — launchpad scanning with filters (pump.fun, etc.)
+- `simple_kline` — K-line with smart money/KOL/developer overlays
+- `trading_dynamics` — buy/sell pressure across time windows
+- `transaction_list` — recent transactions with tag filtering
+- `holders_info` — holder distribution and top holders
+- `profit_address_analysis` — profitable vs losing address stats
+- `top_profit` — top profitable addresses per token
+
+### Added — Smart Money (1 tool)
+- `smart_money_addresses` — KOL/smart money address discovery with performance filters
+
+### Added — RWA Stock Trading (6 tools)
+- `rwa_ticker_list` — available RWA stocks (NVDA, TSLA, AAPL, etc.)
+- `rwa_config` — trading config (stablecoins, limits, gas info)
+- `rwa_stock_info` — stock info via GET request
+- `rwa_order_price` — pre-trade buy/sell price
+- `rwa_kline` — K-line for RWA stocks
+- `rwa_my_holdings` — user's RWA portfolio
+
+### Added — Balance (1 tool)
+- `balance` — batch balance + USD values (with `nocache`, `appointCurrency`, `noreport`)
+
+### Added — Infrastructure
+- `_request_get` — GET request support with BKHmacAuth signing (for RWA stock info)
+- `BGW_WALLET_ID` env var for Social Login Wallet users
+
+### Security
+- ✅ Zero hardcoded secrets (removed API Key/Secret/Partner Code)
+- ✅ Single outbound target: `copenapi.bgwapi.io`
+- ✅ No file system access, no dynamic code execution, no persistence
+- ✅ SlowMist security review: 🟢 LOW risk
+
+### Stats
+- 36 MCP tools (was 11)
+- 33 API endpoints covered (100% Skill parity)
+
+---
+
 ## [2026.3.5-1] - 2026-03-05
 
 ### Added

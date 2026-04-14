@@ -920,7 +920,9 @@ def transfer_make_order(
         memo: Optional memo for on-chain inclusion (chain support varies)
         no_gas: Enable gasless mode — gas paid from USDT/USDC balance (default False)
         no_gas_pay_token: Specific pay token contract for gasless (optional, server auto-selects if empty)
-        override_7702: Override existing third-party EIP-7702 binding (default False)
+        override_7702: DANGEROUS — permanently replaces existing third-party EIP-7702 binding.
+                       Only use after explicit user confirmation. If the API returns error_code 30108,
+                       explain the risk to the user before retrying with override_7702=True. (default False)
     """
     body: dict[str, Any] = {
         "chain": chain,

@@ -93,10 +93,13 @@ CHAINS = {
 mcp = FastMCP(
     "Bitget Wallet",
     instructions=(
-        "On-chain data queries, token security audits, swap operations, and balance lookups "
+        "On-chain data queries, token security audits, swap operations, token transfers, and balance lookups "
         "via Bitget Wallet API. "
         "Supports Ethereum, Solana, BNB Chain, Base, Arbitrum, Tron, TON, Sui, Optimism, Polygon, Morph. "
         "Swap flow: quote → confirm → make_order → (sign externally) → send → get_order_details. "
+        "Transfer flow: transfer_make_order → (sign externally) → transfer_submit → transfer_get_order. "
+        "Gasless transfer: pay gas from USDT/USDC balance instead of native tokens. "
+        "Supported transfer chains: eth, bnb, base, arbitrum, matic, morph, sol. "
         "Pre-trade safety: use check_swap_token before swapping unknown tokens. "
         "Token analysis tools: search tokens by keyword, get detailed market info (price, mcap, FDV, liquidity, holders, "
         "narratives), check developer history and rug status, view K-line charts with smart money/KOL/developer overlays, "
@@ -882,6 +885,94 @@ def balance(wallets: list[dict], currency: str = "usd") -> dict:
         "appointCurrency": currency,
         "noreport": True,
     })
+
+
+# ---------------------------------------------------------------------------
+# Transfer Tools
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def transfer_make_order(
+    chain: str,
+    contract: str,
+    from_address: str,
+    to_address: str,
+    amount: str,
+    memo: str = "",
+    no_gas: bool = False,
+    no_gas_pay_token: str = "",
+    override_7702: bool = False,
+) -> dict:
+    """Create a token transfer order and receive unsigned transaction data to sign.
+
+    This is step 1 of the transfer flow: transfer_make_order → (sign) → transfer_submit → transfer_get_order.
+    Returns unsigned transaction data (source) that must be signed by the wallet.
+    Supports gasless mode: set no_gas=True to pay gas from USDT/USDC balance.
+
+    Supported chains: eth, bnb, base, arbitrum, matic, morph, sol.
+
+    Args:
+        chain: Chain identifier (eth, bnb, base, arbitrum, matic, morph, sol)
+        contract: Token contract address. Use empty string for native token transfers (ETH, SOL, BNB, etc.)
+        from_address: Sender wallet address
+        to_address: Recipient wallet address
+        amount: Human-readable transfer amount (e.g. "100" for 100 USDT). NOT smallest units.
+        memo: Optional memo for on-chain inclusion (chain support varies)
+        no_gas: Enable gasless mode — gas paid from USDT/USDC balance (default False)
+        no_gas_pay_token: Specific pay token contract for gasless (optional, server auto-selects if empty)
+        override_7702: Override existing third-party EIP-7702 binding (default False)
+    """
+    body: dict[str, Any] = {
+        "chain": chain,
+        "contract": contract,
+        "fromAddress": from_address,
+        "toAddress": to_address,
+        "amount": amount,
+    }
+    if memo:
+        body["memo"] = memo
+    if no_gas:
+        body["noGas"] = True
+    if no_gas_pay_token:
+        body["noGasPayToken"] = no_gas_pay_token
+    if override_7702:
+        body["override7702"] = True
+    return _request("/userv2/order/makeTransferOrder", body)
+
+
+@mcp.tool()
+def transfer_submit(order_id: str, sig: str) -> dict:
+    """Submit a signed transfer order for on-chain broadcast.
+
+    This is step 2 of the transfer flow: transfer_make_order → (sign) → transfer_submit → transfer_get_order.
+
+    Args:
+        order_id: Order ID from transfer_make_order result (data.orderId)
+        sig: Signed transaction data. Format depends on chain:
+             - EVM (evm_legacy/evm_1559): raw signed transaction hex
+             - EVM (evm_7702): JSON.stringify of msgToSign array with sig fields filled
+             - Solana (sol_raw/sol_partial): base58 signed transaction
+    """
+    return _request("/userv2/order/submitTransferOrder", {
+        "orderId": order_id,
+        "sig": sig,
+    })
+
+
+@mcp.tool()
+def transfer_get_order(order_id: str) -> dict:
+    """Query transfer order status. Poll until terminal status (SUCCESS or FAILED).
+
+    Status flow: PENDING → PROCESSING → SUCCESS | FAILED.
+
+    Gasless orders may have txid in format 'getgas_task_xxx' (not final chain hash).
+
+    Args:
+        order_id: Order ID from transfer_make_order result
+    """
+    import urllib.parse
+    path = f"/userv2/order/getTransferOrder?orderId={urllib.parse.quote(order_id)}"
+    return _request_get(path)
 
 
 # ---------------------------------------------------------------------------

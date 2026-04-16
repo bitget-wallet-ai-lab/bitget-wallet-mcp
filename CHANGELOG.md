@@ -6,6 +6,28 @@ Format: date-based versioning (`YYYY.M.DD-N`), aligned with [bitget-wallet-skill
 
 ---
 
+## [2026.4.13-1] - 2026-04-13
+
+### Added — Token Transfer (3 tools, aligned with Skill PR #53)
+- `transfer_make_order` — create transfer order via `POST /userv2/order/makeTransferOrder`, returns unsigned tx data
+  - Supports gasless mode (`no_gas=True`): gas paid from USDT/USDC balance
+  - Supports EIP-7702 override (`override_7702=True`) for existing 7702 bindings
+  - Optional `no_gas_pay_token` for manual pay token selection
+  - Optional `memo` for on-chain memo inclusion
+- `transfer_submit` — submit signed transfer via `POST /userv2/order/submitTransferOrder`
+- `transfer_get_order` — poll transfer order status via `GET /userv2/order/getTransferOrder`
+  - Status flow: PENDING → PROCESSING → SUCCESS | FAILED
+
+### Changed
+- Updated MCP instructions string with transfer flow and gasless description
+- Supported transfer chains: eth, bnb, base, arbitrum, matic, morph, sol
+
+### Stats
+- 39 MCP tools (was 36)
+- 36 API endpoints covered (100% Skill parity)
+
+---
+
 ## [2026.3.31-1] - 2026-03-31
 
 ### Breaking Changes

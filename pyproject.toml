@@ -1,7 +1,7 @@
 [project]
 name = "bitget-wallet-mcp"
-version = "2026.3.31-1"
-description = "MCP Server for Bitget Wallet — on-chain data, token analysis, smart money, RWA stocks, swaps, and balance queries"
+version = "2026.4.13-1"
+description = "MCP Server for Bitget Wallet — on-chain data, token analysis, smart money, RWA stocks, swaps, token transfers, and balance queries"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

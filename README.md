@@ -41,6 +41,11 @@ An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that e
 - **Check Token** — pre-trade risk check
 - **Token List** — popular tokens per chain
 
+### 🔁 Token Transfer (3 tools)
+- **Make Transfer Order** — create transfer order, get unsigned tx data (supports gasless)
+- **Submit Transfer** — submit signed transfer transaction
+- **Get Transfer Order** — poll transfer order status (PENDING → PROCESSING → SUCCESS/FAILED)
+
 ### 💰 Balance (1 tool)
 - **Batch Balance** — multi-chain token balances with USD values
 
@@ -96,7 +101,7 @@ Add to your MCP settings:
 }
 ```
 
-## Tools (36)
+## Tools (39)
 
 ### Market Data
 | Tool | Description |
@@ -149,12 +154,19 @@ Add to your MCP settings:
 | `check_swap_token` | Pre-trade risk check |
 | `get_token_list` | Popular tokens per chain |
 
+### Token Transfer
+| Tool | Description |
+|------|-------------|
+| `transfer_make_order` | Create transfer order (unsigned tx data, supports gasless) |
+| `transfer_submit` | Submit signed transfer transaction |
+| `transfer_get_order` | Poll transfer order status |
+
 ### Balance
 | Tool | Description |
 |------|-------------|
 | `balance` | Batch balance + USD values |
 
-> ⚠️ **Swap amounts are human-readable** — pass `"0.1"` for 0.1 USDT, NOT wei/lamports.
+> ⚠️ **Amounts are human-readable** — pass `"0.1"` for 0.1 USDT, NOT wei/lamports.
 
 ## Environment Variables
 

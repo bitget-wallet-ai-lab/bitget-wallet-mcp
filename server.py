@@ -927,8 +927,8 @@ def transfer_make_order(
     body: dict[str, Any] = {
         "chain": chain,
         "contract": contract,
-        "fromAddress": from_address,
-        "toAddress": to_address,
+        "from": from_address,
+        "to": to_address,
         "amount": amount,
     }
     if memo:
